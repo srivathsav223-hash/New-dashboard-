@@ -3,63 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌸 RINTU DASHBOARD</title>
+    <title>🌸 RINTU NEO DASHBOARD</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --bg-main: #0b0a12;
+            --bg-card: rgba(18, 18, 35, 0.75);
+            --neon-purple: #c084fc;
+            --neon-pink: #ff6b9d;
+            --neon-blue: #60a5fa;
+            --neon-green: #34d399;
+            --border-glow: rgba(192, 132, 252, 0.2);
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background: #0a0a1a; min-height: 100vh; padding: 16px; background-image: radial-gradient(ellipse at 10% 20%, rgba(120, 80, 255, 0.15) 0%, transparent 50%), radial-gradient(ellipse at 90% 80%, rgba(255, 50, 150, 0.12) 0%, transparent 50%), radial-gradient(ellipse at 50% 50%, rgba(0, 150, 255, 0.05) 0%, transparent 70%); display: flex; justify-content: center; align-items: flex-start; position: relative; overflow-x: hidden; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-main); min-height: 100vh; padding: 16px; background-image: radial-gradient(circle at 10% 20%, rgba(120, 80, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 90% 80%, rgba(255, 50, 150, 0.12) 0%, transparent 50%); display: flex; justify-content: center; align-items: flex-start; position: relative; overflow-x: hidden; color: #fff; }
         .container { max-width: 850px; width: 100%; margin: 0 auto; }
-        .menu-btn { position: fixed; top: 20px; left: 20px; font-size: 26px; color: rgba(255, 255, 255, 0.4); cursor: pointer; z-index: 1000; transition: 0.3s; background: rgba(22, 22, 50, 0.6); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(10px); }
-        .menu-btn:hover { color: #c084fc; background: rgba(22, 22, 50, 0.9); }
-        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 999; display: none; }
+        
+        /* Neon Menu Button */
+        .menu-btn { position: fixed; top: 20px; left: 20px; font-size: 24px; color: #fff; cursor: pointer; z-index: 1000; transition: 0.3s; background: var(--bg-card); padding: 12px; border-radius: 50%; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 15px var(--border-glow); }
+        .menu-btn:hover { color: var(--neon-purple); transform: scale(1.05); border-color: var(--neon-purple); }
+        
+        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 999; display: none; }
         .sidebar-overlay.active { display: block; }
-        .sidebar { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background: #12122b; border-right: 1px solid rgba(255,255,255,0.1); z-index: 1001; padding: 30px 20px; transition: 0.3s ease-in-out; box-shadow: 4px 0 30px rgba(0,0,0,0.5); }
+        .sidebar { position: fixed; top: 0; left: -340px; width: 320px; height: 100%; background: #15152a; border-right: 1px solid rgba(255,255,255,0.1); z-index: 1001; padding: 30px 20px; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 4px 0 30px rgba(0,0,0,0.5); }
         .sidebar.open { left: 0; }
-        .close-btn { color: #f87171; font-size: 24px; text-align: right; cursor: pointer; margin-bottom: 30px; }
-        .sidebar h2 { color: #c084fc; text-align: center; margin-bottom: 25px; font-size: 22px; font-family: 'Orbitron', monospace; }
-        .sidebar label { display: block; color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 5px; margin-top: 15px; }
-        .sidebar textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #0a0a1a; color: #fff; font-size: 14px; resize: vertical; outline: none; min-height: 120px; }
-        .sidebar textarea:focus { border-color: #c084fc; }
-        .sidebar button.save-btn { width: 100%; padding: 12px; margin-top: 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, #c084fc, #8b5cf6); color: white; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .sidebar button.save-btn:hover { opacity: 0.9; transform: scale(1.02); }
-        .sidebar .status-msg { text-align: center; margin-top: 15px; font-size: 13px; color: #34d399; display: none; }
+        .close-btn { color: #f87171; font-size: 26px; text-align: right; cursor: pointer; margin-bottom: 30px; transition: 0.2s; }
+        .close-btn:hover { transform: rotate(90deg); }
+        .sidebar h2 { color: var(--neon-purple); text-align: center; margin-bottom: 25px; font-size: 24px; font-family: 'Orbitron', monospace; text-shadow: 0 0 20px rgba(192, 132, 252, 0.3); }
+        .sidebar label { display: block; color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 5px; margin-top: 15px; }
+        .sidebar textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #0b0a12; color: #fff; font-size: 14px; resize: vertical; outline: none; min-height: 120px; transition: 0.3s; }
+        .sidebar textarea:focus { border-color: var(--neon-purple); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2); }
+        .sidebar button.save-btn { width: 100%; padding: 14px; margin-top: 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--neon-purple), #8b5cf6); color: white; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 0 15px rgba(139, 92, 246, 0.3); }
+        .sidebar button.save-btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 0 25px rgba(139, 92, 246, 0.5); }
+        .sidebar .status-msg { text-align: center; margin-top: 15px; font-size: 14px; color: var(--neon-green); display: none; }
+
+        /* Header */
         .header { text-align: center; padding: 30px 0 25px; position: relative; }
-        .header h1 { font-family: 'Orbitron', monospace; font-size: 2.8em; font-weight: 900; background: linear-gradient(135deg, #ff6b9d, #c084fc, #60a5fa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 4s ease-in-out infinite; text-shadow: 0 0 60px rgba(192, 132, 252, 0.3); letter-spacing: 2px; }
+        .header h1 { font-family: 'Orbitron', monospace; font-size: 2.8em; font-weight: 900; background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple), var(--neon-blue)); background-size: 300% 300%; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: gradientShift 4s ease-in-out infinite; text-shadow: 0 0 60px rgba(192, 132, 252, 0.3); letter-spacing: 2px; }
         @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        .header .subtitle { color: rgba(255, 255, 255, 0.5); font-size: 0.85em; letter-spacing: 4px; margin-top: 4px; font-weight: 300; text-transform: uppercase; }
-        .header .glow-line { width: 100px; height: 3px; margin: 12px auto 0; background: linear-gradient(90deg, transparent, #c084fc, #ff6b9d, transparent); border-radius: 10px; animation: pulseGlow 2s ease-in-out infinite; }
+        .header .subtitle { color: rgba(255, 255, 255, 0.4); font-size: 0.85em; letter-spacing: 6px; margin-top: 4px; font-weight: 300; text-transform: uppercase; }
+        .header .glow-line { width: 120px; height: 3px; margin: 15px auto 0; background: linear-gradient(90deg, transparent, var(--neon-purple), var(--neon-pink), transparent); border-radius: 10px; animation: pulseGlow 2s ease-in-out infinite; }
         @keyframes pulseGlow { 0%, 100% { opacity: 0.4; transform: scaleX(0.8); } 50% { opacity: 1; transform: scaleX(1); } }
-        .card { background: rgba(22, 22, 50, 0.75); backdrop-filter: blur(20px); border-radius: 20px; padding: 20px; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.06); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); transition: all 0.3s ease; }
-        .card:hover { border-color: rgba(192, 132, 252, 0.2); box-shadow: 0 8px 40px rgba(120, 80, 255, 0.15); }
-        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 0.9em; font-weight: 600; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ef4444; transition: all 0.3s ease; }
-        .status-dot.online { background: #34d399; box-shadow: 0 0 15px rgba(52, 211, 153, 0.3); }
-        .status-label { color: #ef4444; transition: color 0.3s; }
-        .status-label.online { color: #34d399; }
-        .stats { display: flex; gap: 10px; }
-        .stat-badge { background: rgba(255, 255, 255, 0.05); padding: 5px 12px; border-radius: 20px; font-size: 0.75em; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 6px; }
-        .controls { display: flex; gap: 12px; justify-content: center; margin-bottom: 16px; }
-        .btn { padding: 12px 24px; border: none; border-radius: 12px; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.9em; cursor: pointer; transition: all 0.3s ease; flex: 1; max-width: 160px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-start { background: linear-gradient(135deg, #34d399, #10b981); color: #0a0a1a; box-shadow: 0 4px 15px rgba(52, 211, 153, 0.3); }
-        .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(52, 211, 153, 0.4); }
+
+        /* Cards */
+        .card { background: var(--bg-card); backdrop-filter: blur(20px); border-radius: 24px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255, 255, 255, 0.06); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .card::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(192, 132, 252, 0.05) 0%, transparent 60%); opacity: 0; transition: opacity 0.5s; pointer-events: none; }
+        .card:hover::before { opacity: 1; }
+        .card:hover { border-color: var(--border-glow); box-shadow: 0 8px 40px rgba(120, 80, 255, 0.15); }
+
+        .status-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .status-indicator { display: flex; align-items: center; gap: 12px; font-size: 0.9em; font-weight: 600; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ef4444; transition: all 0.3s ease; }
+        .status-dot.online { background: var(--neon-green); box-shadow: 0 0 20px rgba(52, 211, 153, 0.4); }
+        .status-label { color: #ef4444; transition: color 0.3s; letter-spacing: 1px; }
+        .status-label.online { color: var(--neon-green); }
+        .stats { display: flex; gap: 12px; }
+        .stat-badge { background: rgba(255, 255, 255, 0.05); padding: 6px 14px; border-radius: 20px; font-size: 0.75em; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.05); }
+
+        .controls { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; }
+        .btn { padding: 14px 32px; border: none; border-radius: 14px; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 0.95em; cursor: pointer; transition: all 0.3s ease; flex: 1; max-width: 180px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-start { background: linear-gradient(135deg, var(--neon-green), #10b981); color: #0b0a12; box-shadow: 0 4px 20px rgba(52, 211, 153, 0.3); }
+        .btn-start:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(52, 211, 153, 0.4); }
         .btn-start:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
         .btn-stop { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .btn-stop:hover { background: rgba(239, 68, 68, 0.25); }
-        .player { text-align: center; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.05); margin-top: 10px; }
-        .player-icon { font-size: 3.5em; margin-bottom: 5px; background: linear-gradient(135deg, #c084fc, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .player-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 3px; color: rgba(255, 255, 255, 0.3); margin-bottom: 2px; }
+        .btn-stop:hover { background: rgba(239, 68, 68, 0.25); transform: translateY(-3px); }
+
+        /* Player & Volume */
+        .player-area { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255, 255, 255, 0.05); padding-top: 16px; margin-top: 5px; flex-wrap: wrap; gap: 15px; }
+        .player-info { display: flex; align-items: center; gap: 15px; }
+        .player-icon { font-size: 2.5em; background: linear-gradient(135deg, var(--neon-purple), #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .player-text { display: flex; flex-direction: column; }
+        .player-label { font-size: 0.65em; text-transform: uppercase; letter-spacing: 3px; color: rgba(255, 255, 255, 0.3); }
         .player-status { font-size: 1.1em; color: rgba(255, 255, 255, 0.8); font-weight: 400; }
-        .player-status span { color: #c084fc; }
-        .commands-title { display: flex; align-items: center; gap: 8px; color: rgba(255, 255, 255, 0.3); font-size: 0.75em; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 12px; font-weight: 600; }
-        .commands-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .cmd-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 12px 5px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
-        .cmd-btn:hover { background: rgba(192, 132, 252, 0.1); border-color: rgba(192, 132, 252, 0.3); transform: translateY(-2px); }
-        .cmd-btn i { font-size: 1.4em; display: block; margin-bottom: 4px; color: rgba(255, 255, 255, 0.6); }
-        .cmd-btn:hover i { color: #c084fc; }
+        .player-status span { color: var(--neon-purple); }
+        
+        /* NEW: Volume Slider */
+        .volume-control { display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); padding: 8px 16px; border-radius: 30px; }
+        .volume-control i { color: rgba(255,255,255,0.6); font-size: 1.1em; }
+        .volume-slider { width: 80px; height: 4px; -webkit-appearance: none; appearance: none; background: rgba(255,255,255,0.2); border-radius: 5px; outline: none; transition: 0.2s; }
+        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--neon-purple); cursor: pointer; box-shadow: 0 0 10px rgba(192, 132, 252, 0.4); }
+        .volume-value { font-size: 0.85em; font-weight: 600; color: rgba(255,255,255,0.8); min-width: 35px; text-align: center; }
+
+        .commands-title { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.3); font-size: 0.75em; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 16px; font-weight: 600; }
+        .commands-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .cmd-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 16px; padding: 16px 5px; text-align: center; cursor: pointer; transition: all 0.3s ease; }
+        .cmd-btn:hover { background: rgba(192, 132, 252, 0.1); border-color: rgba(192, 132, 252, 0.3); transform: translateY(-4px); box-shadow: 0 4px 15px rgba(192, 132, 252, 0.1); }
+        .cmd-btn i { font-size: 1.6em; display: block; margin-bottom: 6px; color: rgba(255, 255, 255, 0.6); }
+        .cmd-btn:hover i { color: var(--neon-purple); }
         .cmd-btn span { font-size: 0.7em; color: rgba(255, 255, 255, 0.4); font-weight: 400; }
-        @media (max-width: 500px) { .header h1 { font-size: 2em; } .commands-grid { grid-template-columns: repeat(3, 1fr); } .controls .btn { max-width: 100%; } .stats .stat-badge:last-child { display: none; } }
+        
+        @media (max-width: 500px) { .header h1 { font-size: 2em; } .commands-grid { grid-template-columns: repeat(3, 1fr); } .controls .btn { max-width: 100%; } .player-area { flex-direction: column; align-items: stretch; } .volume-control { justify-content: center; } }
     </style>
 </head>
 <body>
@@ -69,7 +103,7 @@
         <div class="close-btn" onclick="closeSidebar()"><i class="fas fa-times-circle"></i></div>
         <h2><i class="fas fa-cog"></i> Token Manager</h2>
         <label>Paste ALL tokens here (1 per line):</label>
-        <textarea id="bulkTokens" rows="6" placeholder="TOKEN_1&#10;TOKEN_2&#10;TOKEN_3&#10;TOKEN_4&#10;TOKEN_5"></textarea>
+        <textarea id="bulkTokens" rows="6" placeholder="TOKEN_1&#10;TOKEN_2&#10;TOKEN_3"></textarea>
         <button class="save-btn" onclick="saveTokens()"><i class="fas fa-save"></i> Load Tokens & Start Bots</button>
         <div class="status-msg" id="sidebarMsg">✅ Tokens saved! Starting bots...</div>
     </div>
@@ -78,7 +112,7 @@
         <div class="header">
             <h1>RINTU</h1>
             <h1 style="font-size:1.8em; margin-top:-15px;">DASHBOARD</h1>
-            <div class="subtitle">Discord Self-Bot Controller</div>
+            <div class="subtitle">NEO Controller</div>
             <div class="glow-line"></div>
         </div>
 
@@ -90,37 +124,46 @@
                 </div>
                 <div class="stats">
                     <div class="stat-badge"><i class="fas fa-robot"></i> <span id="botCount">0</span> bots</div>
-                    <div class="stat-badge"><i class="fas fa-volume-up"></i> 100%</div>
+                    <div class="stat-badge"><i class="fas fa-signal"></i> 100%</div>
                 </div>
             </div>
             <div class="controls">
                 <button class="btn btn-start" id="startBtn" onclick="startBot()"><i class="fas fa-play"></i> START</button>
                 <button class="btn btn-stop" id="stopBtn" onclick="stopBot()"><i class="fas fa-stop"></i> STOP</button>
             </div>
-            <div class="player">
-                <div class="player-icon"><i class="fas fa-music"></i></div>
-                <div class="player-label">Now Playing</div>
-                <div class="player-status"><span>✦</span> Ready to play</div>
+            <div class="player-area">
+                <div class="player-info">
+                    <div class="player-icon"><i class="fas fa-music"></i></div>
+                    <div class="player-text">
+                        <div class="player-label">Now Playing</div>
+                        <div class="player-status"><span>✦</span> Ready to play</div>
+                    </div>
+                </div>
+                <div class="volume-control">
+                    <i class="fas fa-volume-down"></i>
+                    <input type="range" min="0" max="100" value="100" class="volume-slider" id="volSlider" oninput="changeVolume(this.value)">
+                    <span class="volume-value" id="volDisplay">100%</span>
+                </div>
             </div>
         </div>
 
         <div class="commands-title"><i class="fas fa-bolt"></i> Quick Commands</div>
         <div class="card">
             <div class="commands-grid">
-                <div class="cmd-btn"><i class="fas fa-stop-circle"></i><span>Stop</span></div>
-                <div class="cmd-btn"><i class="fas fa-pause-circle"></i><span>Pause</span></div>
-                <div class="cmd-btn"><i class="fas fa-play-circle"></i><span>Resume</span></div>
-                <div class="cmd-btn"><i class="fas fa-fire"></i><span>Blast</span></div>
-                <div class="cmd-btn"><i class="fas fa-bomb"></i><span>Double</span></div>
-                <div class="cmd-btn"><i class="fas fa-volume-up"></i><span>Super</span></div>
-                <div class="cmd-btn"><i class="fas fa-bolt"></i><span>Force</span></div>
-                <div class="cmd-btn"><i class="fas fa-music"></i><span>Bass</span></div>
-                <div class="cmd-btn"><i class="fas fa-snake"></i><span>Pungi</span></div>
-                <div class="cmd-btn"><i class="fas fa-volume-off"></i><span>Loud</span></div>
-                <div class="cmd-btn"><i class="fas fa-sync-alt"></i><span>Loop</span></div>
-                <div class="cmd-btn"><i class="fas fa-sign-out-alt"></i><span>Leave</span></div>
-                <div class="cmd-btn"><i class="fas fa-skull"></i><span>Max</span></div>
-                <div class="cmd-btn"><i class="fas fa-chart-bar"></i><span>Status</span></div>
+                <div class="cmd-btn" onclick="sendCmd('stop')"><i class="fas fa-stop-circle"></i><span>Stop</span></div>
+                <div class="cmd-btn" onclick="sendCmd('pause')"><i class="fas fa-pause-circle"></i><span>Pause</span></div>
+                <div class="cmd-btn" onclick="sendCmd('resume')"><i class="fas fa-play-circle"></i><span>Resume</span></div>
+                <div class="cmd-btn" onclick="sendCmd('blast')"><i class="fas fa-fire"></i><span>Blast</span></div>
+                <div class="cmd-btn" onclick="sendCmd('double')"><i class="fas fa-bomb"></i><span>Double</span></div>
+                <div class="cmd-btn" onclick="sendCmd('superloud')"><i class="fas fa-volume-up"></i><span>Super</span></div>
+                <div class="cmd-btn" onclick="sendCmd('forceloud')"><i class="fas fa-bolt"></i><span>Force</span></div>
+                <div class="cmd-btn" onclick="sendCmd('bassboost')"><i class="fas fa-music"></i><span>Bass</span></div>
+                <div class="cmd-btn" onclick="sendCmd('pungi')"><i class="fas fa-snake"></i><span>Pungi</span></div>
+                <div class="cmd-btn" onclick="sendCmd('loudmode')"><i class="fas fa-volume-off"></i><span>Loud</span></div>
+                <div class="cmd-btn" onclick="sendCmd('loop')"><i class="fas fa-sync-alt"></i><span>Loop</span></div>
+                <div class="cmd-btn" onclick="sendCmd('leave')"><i class="fas fa-sign-out-alt"></i><span>Leave</span></div>
+                <div class="cmd-btn" onclick="sendCmd('max')"><i class="fas fa-skull"></i><span>Max</span></div>
+                <div class="cmd-btn" onclick="sendCmd('status')"><i class="fas fa-chart-bar"></i><span>Status</span></div>
             </div>
         </div>
     </div>
@@ -141,6 +184,15 @@
             socket.emit('start_bot_with_tokens', { tokens: tokenList });
             msg.style.display = 'block'; msg.innerText = `✅ Loaded ${tokenList.length} tokens!`;
             setTimeout(() => closeSidebar(), 1500);
+        }
+
+        function changeVolume(val) {
+            document.getElementById('volDisplay').innerText = val + '%';
+            socket.emit('update_volume', parseInt(val));
+        }
+
+        function sendCmd(cmd) {
+            socket.emit('cmd', cmd);
         }
 
         socket.on('bot-started', (data) => {
@@ -164,4 +216,4 @@
         function stopBot() { socket.emit('stop_bots'); }
     </script>
 </body>
-                  </html>
+</html>
