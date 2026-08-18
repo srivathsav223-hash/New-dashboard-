@@ -131,7 +131,15 @@ io.on('connection', (socket) => {
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (channel) {
-                    const conn = joinVoiceChannel({ channelId: channel.id, guildId: channel.guild.id, adapterCreator: channel.guild.voiceAdapterCreator, selfMute: false, selfDeaf: false, group: client.user.id });
+                    const conn = joinVoiceChannel({ 
+    channelId: channel.id, 
+    guildId: channel.guild.id, 
+    adapterCreator: channel.guild.voiceAdapterCreator, 
+    selfMute: false, 
+    selfDeaf: false, 
+    group: client.user.id,
+    forceConvert: true  // <--- ADD THIS LINE
+});
                     const player = createAudioPlayer();
                     conn.subscribe(player);
                     connections.set(index, conn);
