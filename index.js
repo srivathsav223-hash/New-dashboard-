@@ -154,7 +154,7 @@ io.on('connection', (socket) => {
         try {
     const result = await youtubedl(url, {
         noPlaylist: true,
-format: "bestaudio[ext=webm]/bestaudio/best",
+format: "bestaudio[ext=webm]/bestaudio/",
 noWarnings: true,
 ignoreErrors: true,
 noCheckCertificates: true
