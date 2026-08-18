@@ -153,11 +153,11 @@ io.on('connection', (socket) => {
         socket.emit('log_event', { msg: `🎵 Fetching audio from URL...`, type: 'info' });
         try {
     const result = await youtubedl(url, {
-        dumpSingleJson: true,
         noPlaylist: true,
-        format: "bestaudio[ext=webm]/bestaudio/best",
-        noWarnings: true,
-        cookies: 'cookies.txt'  // <--- ADD THIS LINE
+format: "bestaudio[ext=webm]/bestaudio/best",
+noWarnings: true,
+ignoreErrors: true,
+noCheckCertificates: true
     });
     currentUrl = result.url;
     currentTitle = result.title || "YouTube Audio";
