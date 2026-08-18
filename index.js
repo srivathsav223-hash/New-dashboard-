@@ -9,12 +9,13 @@ const { spawn } = require("child_process");
 const youtubedl = require("youtube-dl-exec");
 const fs = require("fs");
 
-// --- WEBSERVER SETUP ---
+// --- WEB SERVER SETUP (BRINGS BACK YOUR DASHBOARD) ---
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-app.use(express.static(__dirname));
+// THIS IS THE LINE THAT WAS MISSING EARLIER!
+app.use(express.static(__dirname)); 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.use(express.json());
 
@@ -188,7 +189,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// --- LOGIN BOTS (CLUSTER) ---
+// --- LOGIN BOTS ---
 function loginAllBots() {
     if (dashboardTokens.length === 0) return console.log('❌ No tokens to login.');
     for (let i = 0; i < dashboardTokens.length; i++) {
@@ -203,6 +204,6 @@ function loginAllBots() {
     }
 }
 
-// --- START WEB SERVER ---
+// --- START SERVER ---
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`🚀 RINTU DASHBOARD LIVE on port ${PORT}`));
