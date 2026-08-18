@@ -110,7 +110,7 @@ function loginAllBots() {
     }
 }
 
-// --- SOCKET EVENTS (Bridge to Dashboard) ---
+// --- SOCKET EVENTS ---
 io.on('connection', (socket) => {
     console.log('📶 Dashboard connected');
 
@@ -141,6 +141,29 @@ io.on('connection', (socket) => {
             } catch (err) {
                 socket.emit('log_event', { msg: `Bot ${index + 1} join error`, type: 'error' });
             }
+        }
+    });
+
+    // --- NEW ADDITION: PLAY SONG FROM DASHBOARD ---
+    socket.on('play_song', async (url) => {
+        if (!currentChannelId) {
+            socket.emit('log_event', { msg: '❌ Join a voice channel first!', type: 'error' });
+            return;
+        }
+        socket.emit('log_event', { msg: `🎵 Fetching audio from URL...`, type: 'info' });
+        try {
+            const result = await youtubedl(url, {
+                dumpSingleJson: true,
+                noPlaylist: true,
+                format: "bestaudio[ext=webm]/bestaudio/best",
+                noWarnings: true
+            });
+            currentUrl = result.url;
+            currentTitle = result.title || "YouTube Audio";
+            socket.emit('song_playing', currentTitle);
+            startFFmpegStream(currentUrl);
+        } catch (err) {
+            socket.emit('log_event', { msg: `❌ Error extracting audio: ${err.message}`, type: 'error' });
         }
     });
 
