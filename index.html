@@ -4,167 +4,75 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌸 RINTU ULTRA DASHBOARD</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --bg-main: #0a0915;
-            --bg-card: rgba(20, 18, 40, 0.8);
-            --neon-purple: #b794f4;
-            --neon-pink: #ff6b9d;
-            --neon-blue: #63b3ed;
-            --neon-green: #68d391;
-            --text-muted: #a0aec0;
-            --border-color: rgba(255,255,255,0.08);
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Poppins', sans-serif; background: var(--bg-main); min-height: 100vh; padding: 16px; background-image: radial-gradient(circle at 0% 0%, rgba(120, 80, 255, 0.1) 0%, transparent 40%); display: flex; justify-content: center; align-items: flex-start; color: #fff; }
-        .container { max-width: 900px; width: 100%; margin: 0 auto; }
-        
-        /* Menu Button - Clean, not overlapping text */
-        .menu-btn { position: absolute; top: 20px; left: 16px; font-size: 22px; color: #fff; cursor: pointer; z-index: 1000; transition: 0.3s; background: var(--bg-card); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(10px); border: 1px solid var(--border-color); box-shadow: 0 0 20px rgba(183, 148, 244, 0.1); }
-        .menu-btn:hover { color: var(--neon-purple); transform: scale(1.05); }
-        
-        .sidebar-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 999; display: none; }
-        .sidebar-overlay.active { display: block; }
-        .sidebar { position: fixed; top: 0; left: -340px; width: 320px; height: 100%; background: #13112a; border-right: 1px solid var(--border-color); z-index: 1001; padding: 30px 20px; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 4px 0 40px rgba(0,0,0,0.8); }
-        .sidebar.open { left: 0; }
-        .close-btn { color: #f87171; font-size: 26px; text-align: right; cursor: pointer; margin-bottom: 30px; }
-        .close-btn:hover { transform: rotate(90deg); }
-        .sidebar h2 { color: var(--neon-purple); text-align: center; margin-bottom: 25px; font-size: 24px; font-family: 'Orbitron', monospace; }
-        .sidebar label { display: block; color: var(--text-muted); font-size: 13px; margin-bottom: 5px; margin-top: 15px; }
-        .sidebar textarea { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--border-color); background: #0a0915; color: #fff; font-size: 14px; resize: vertical; outline: none; min-height: 100px; }
-        .sidebar textarea:focus { border-color: var(--neon-purple); }
-        .sidebar button.save-btn { width: 100%; padding: 14px; margin-top: 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, var(--neon-purple), #805ad5); color: white; font-weight: bold; cursor: pointer; transition: 0.2s; box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
-        .sidebar button.save-btn:hover { transform: translateY(-2px); box-shadow: 0 0 30px rgba(139, 92, 246, 0.4); }
-        .sidebar .status-msg { text-align: center; margin-top: 15px; font-size: 13px; color: var(--neon-green); display: none; }
-
-        /* Header - Smaller, Sleeker Text */
-        .header { text-align: center; padding: 15px 0 20px; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .header h1 { font-family: 'Orbitron', monospace; font-size: 1.8em; font-weight: 900; background: linear-gradient(135deg, #ff6b9d, var(--neon-purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: 2px; padding-left: 40px; /* Space for menu icon */ }
-        
-        /* New Subtitle - Self-Bot Controller by Rintu */
-        .header .subtitle { color: var(--text-muted); font-size: 0.65em; letter-spacing: 3px; margin-top: 0px; font-weight: 300; text-transform: uppercase; text-align: center; padding-left: 40px; /* Space for menu icon */ }
-        .header .subtitle span { color: var(--neon-purple); font-weight: 600; }
-
-        .card { background: var(--bg-card); backdrop-filter: blur(20px); border-radius: 20px; padding: 24px; margin-bottom: 16px; border: 1px solid var(--border-color); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
-        
-        .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ef4444; margin-right: 8px; vertical-align: middle; }
-        .status-dot.online { background: var(--neon-green); box-shadow: 0 0 15px rgba(104, 211, 145, 0.4); }
-        .status-text { color: #ef4444; font-weight: 600; }
-        .status-text.online { color: var(--neon-green); }
-        .stat-badge { background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 12px; font-size: 0.75em; color: var(--text-muted); }
-
-        .action-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .action-row .btn { flex: 1; min-width: 100px; padding: 12px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-start { background: linear-gradient(135deg, var(--neon-green), #48bb78); color: #0a0915; }
-        .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-stop { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
-        .btn-stop:hover { background: rgba(239, 68, 68, 0.25); }
-
-        .vc-input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 16px; border-radius: 16px; border: 1px dashed var(--border-color); }
-        .input-row { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border-color); }
-        .input-row i { color: var(--text-muted); }
-        .input-row input { flex: 1; background: transparent; border: none; outline: none; color: #fff; font-family: 'Poppins', sans-serif; padding: 8px; }
-        .input-row input::placeholder { color: var(--text-muted); }
-        .input-row button { background: var(--neon-purple); border: none; color: #fff; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .input-row button:hover { opacity: 0.8; }
-
-        .player-area { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 5px; flex-wrap: wrap; gap: 15px; }
-        .player-info { display: flex; align-items: center; gap: 15px; }
-        .player-icon { font-size: 2em; background: linear-gradient(135deg, var(--neon-purple), #805ad5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .player-label { font-size: 0.65em; text-transform: uppercase; letter-spacing: 3px; color: var(--text-muted); }
-        .player-status { font-size: 1em; color: #fff; }
-        .volume-control { display: flex; align-items: center; gap: 12px; background: rgba(0,0,0,0.3); padding: 6px 14px; border-radius: 30px; }
-        .volume-slider { width: 80px; height: 4px; -webkit-appearance: none; background: rgba(255,255,255,0.2); border-radius: 5px; outline: none; }
-        .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--neon-purple); cursor: pointer; }
-
-        .commands-title { color: var(--text-muted); font-size: 0.75em; text-transform: uppercase; letter-spacing: 4px; margin-bottom: 12px; font-weight: 600; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        body { background: #0b0a12; color: white; padding: 16px; display: flex; justify-content: center; }
+        .container { max-width: 500px; width: 100%; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .card { background: #1a1a2e; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 1px solid #333; }
+        .status-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #ef4444; vertical-align: middle; margin-right: 8px; }
+        .status-dot.online { background: #22c55e; }
+        .status-text.online { color: #22c55e; }
+        .controls { display: flex; gap: 12px; margin-bottom: 16px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .btn-start { background: #22c55e; color: #0b0a12; }
+        .btn-stop { background: #ef4444; color: white; }
+        .inputs { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; background: #1a1a2e; padding: 12px; border-radius: 12px; border: 1px solid #333; }
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        .input-row input { flex: 1; background: #0b0a12; border: 1px solid #333; padding: 10px; border-radius: 8px; color: white; }
+        .input-row button { padding: 10px 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #a78bfa; color: white; }
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        .cmd-btn { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px 5px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .cmd-btn:hover { background: rgba(183, 148, 244, 0.1); border-color: var(--neon-purple); transform: translateY(-3px); }
-        .cmd-btn i { font-size: 1.6em; display: block; margin-bottom: 4px; color: var(--text-muted); }
-        .cmd-btn:hover i { color: var(--neon-purple); }
-        .cmd-btn span { font-size: 0.7em; color: var(--text-muted); }
-
-        .logs-container { background: #05040a; border-radius: 16px; padding: 16px; border: 1px solid var(--border-color); margin-top: 10px; font-family: 'Courier New', monospace; }
-        .logs-header { display: flex; justify-content: space-between; color: var(--text-muted); font-size: 0.75em; letter-spacing: 2px; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-        #liveLogs { height: 150px; overflow-y: auto; font-size: 0.8em; color: #cbd5e0; line-height: 1.6; padding-right: 10px; word-break: break-all; }
-        #liveLogs::-webkit-scrollbar { width: 4px; }
-        #liveLogs::-webkit-scrollbar-thumb { background: var(--neon-purple); border-radius: 10px; }
-        .log-success { color: var(--neon-green); }
-        .log-error { color: #f87171; }
-        .log-info { color: var(--neon-purple); }
-
-        @media (max-width: 500px) { 
-            .header h1 { font-size: 1.5em; } 
-            .header .subtitle { font-size: 0.55em; }
-            .grid { grid-template-columns: repeat(3, 1fr); } 
-            .action-row .btn { min-width: 80px; } 
-        }
+        .cmd-btn { background: #1a1a2e; border: 1px solid #333; border-radius: 12px; padding: 12px 5px; text-align: center; cursor: pointer; }
+        .cmd-btn:hover { border-color: #a78bfa; }
+        .cmd-btn i { font-size: 1.4em; display: block; margin-bottom: 5px; }
+        .cmd-btn span { font-size: 0.7em; color: #999; }
+        .logs { background: #05040a; border-radius: 12px; padding: 12px; border: 1px solid #333; font-family: monospace; font-size: 0.8em; height: 150px; overflow-y: auto; color: #aaa; }
+        #sidebar { position: fixed; top: 0; left: -320px; width: 300px; height: 100%; background: #12122b; transition: 0.3s; padding: 20px; z-index: 1000; }
+        #sidebar.open { left: 0; }
+        #sidebar h2 { color: #a78bfa; text-align: center; margin-bottom: 20px; }
+        #sidebar textarea { width: 100%; height: 100px; background: #0b0a12; border: 1px solid #333; color: white; padding: 10px; border-radius: 8px; }
+        #sidebar button { width: 100%; padding: 12px; margin-top: 15px; background: #a78bfa; border: none; border-radius: 8px; font-weight: bold; color: white; cursor: pointer; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; z-index: 999; }
+        .overlay.active { display: block; }
     </style>
 </head>
 <body>
-    <div class="menu-btn" onclick="openSidebar()"><i class="fas fa-bars"></i></div>
-    <div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
-    <div class="sidebar" id="sidebar">
-        <div class="close-btn" onclick="closeSidebar()"><i class="fas fa-times-circle"></i></div>
-        <h2><i class="fas fa-cog"></i> Token Manager</h2>
-        <label>Paste ALL Tokens Here (1 per line):</label>
-        <textarea id="bulkTokens" placeholder="TOKEN_1&#10;TOKEN_2"></textarea>
-        <button class="save-btn" onclick="saveTokens()"><i class="fas fa-save"></i> Load Tokens & Start Bots</button>
-        <div class="status-msg" id="sidebarMsg">✅ Tokens saved!</div>
+    <div onclick="openSidebar()" style="position: absolute; top: 20px; left: 20px; font-size: 24px; cursor: pointer;">☰</div>
+    <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+    <div id="sidebar">
+        <div onclick="closeSidebar()" style="text-align: right; font-size: 24px; color: #ef4444; cursor: pointer;">✕</div>
+        <h2>Token Manager</h2>
+        <textarea id="bulkTokens" placeholder="Paste tokens (1 per line)"></textarea>
+        <button onclick="saveTokens()">Load Tokens</button>
+        <div id="sidebarMsg" style="color: #22c55e; text-align: center; margin-top: 10px; display: none;">✅ Loaded!</div>
     </div>
 
     <div class="container">
-        <div class="header">
-            <h1>RINTU ULTRA</h1>
-            <div class="subtitle">Self-Bot Controller <span>by Rintu</span></div>
-        </div>
-
+        <div class="header"><h1>RINTU ULTRA</h1><div style="font-size: 0.75em; color: #999;">SELF-BOT CONTROLLER</div></div>
         <div class="card">
             <div class="status-row">
                 <div><span class="status-dot" id="statusDot"></span><span class="status-text" id="statusLabel">OFFLINE</span></div>
-                <div><span class="stat-badge"><i class="fas fa-robot"></i> <span id="botCount">0</span> bots</span></div>
+                <div><span style="background: #1a1a2e; padding: 4px 12px; border-radius: 12px; font-size: 0.75em; color: #999;"><i class="fas fa-robot"></i> <span id="botCount">0</span> bots</span></div>
             </div>
-
-            <div class="action-row">
-                <button class="btn btn-start" id="startBtn" onclick="startBot()"><i class="fas fa-play"></i> START</button>
-                <button class="btn btn-stop" onclick="stopBot()"><i class="fas fa-stop"></i> STOP</button>
+            <div class="controls">
+                <button class="btn btn-start" id="startBtn" onclick="startBot()">▶ START</button>
+                <button class="btn btn-stop" onclick="stopBot()">■ STOP</button>
             </div>
-
-            <div class="vc-input-group">
+            <div class="inputs">
                 <div class="input-row">
-                    <i class="fas fa-headset"></i>
-                    <input type="text" id="channelInput" placeholder="Enter Voice Channel ID to join...">
+                    <input type="text" id="channelInput" placeholder="Channel ID">
                     <button onclick="joinChannel()">Join VC</button>
                 </div>
                 <div class="input-row">
-                    <i class="fas fa-music" style="color:var(--neon-pink);"></i>
-                    <input type="text" id="songInput" placeholder="Paste YouTube URL or raw audio URL here...">
-                    <button style="background:var(--neon-pink);" onclick="playSong()">Play</button>
-                </div>
-            </div>
-
-            <div class="player-area">
-                <div class="player-info">
-                    <div class="player-icon"><i class="fas fa-music"></i></div>
-                    <div>
-                        <div class="player-label">Now Playing</div>
-                        <div class="player-status" id="songStatus">✦ Ready to play</div>
-                    </div>
-                </div>
-                <div class="volume-control">
-                    <i class="fas fa-volume-down" style="color:var(--text-muted);"></i>
-                    <input type="range" min="0" max="100" value="100" class="volume-slider" id="volSlider" oninput="changeVol(this.value)">
-                    <span id="volDisplay" style="color:var(--text-muted); font-size:0.8em; min-width:30px;">100%</span>
+                    <input type="text" id="songInput" placeholder="YouTube or MP3 URL">
+                    <button style="background:#ec4899;" onclick="playSong()">Play</button>
                 </div>
             </div>
         </div>
 
-        <div class="commands-title"><i class="fas fa-bolt"></i> Quick Commands</div>
         <div class="card">
+            <div style="color: #999; font-size: 0.75em; margin-bottom: 12px;">⚡ QUICK COMMANDS</div>
             <div class="grid">
                 <div class="cmd-btn" onclick="sendCmd('stop')"><i class="fas fa-stop-circle"></i><span>Stop</span></div>
                 <div class="cmd-btn" onclick="sendCmd('pause')"><i class="fas fa-pause-circle"></i><span>Pause</span></div>
@@ -183,100 +91,61 @@
             </div>
         </div>
 
-        <div class="logs-container">
-            <div class="logs-header"><span><i class="fas fa-terminal"></i> LIVE ENGINE LOGS</span><span style="font-size:0.8em; color:var(--neon-green);">● connected</span></div>
-            <div id="liveLogs"><span class="log-info">[SYSTEM] Ready for tokens...</span></div>
+        <div class="logs">
+            <div style="color:#22c55e; margin-bottom: 8px;">▸ LIVE ENGINE LOGS</div>
+            <div id="liveLogs">[SYSTEM] Ready for tokens...</div>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io({ transports: ['polling'] });
-
+        const socket = io();
         function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('active'); }
         function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('active'); }
-        
-        function saveTokens() {
-            const raw = document.getElementById('bulkTokens').value;
-            const msg = document.getElementById('sidebarMsg');
-            if(!raw) { alert("Please paste at least one token!"); return; }
-            const list = raw.split('\n').map(t=>t.trim()).filter(t=>t.length>10);
-            if(list.length===0) { alert("No valid tokens found!"); return; }
-            socket.emit('start_bot_with_tokens', { tokens: list });
-            msg.innerText = `✅ Loaded ${list.length} tokens!`;
-            msg.style.display = 'block';
-            setTimeout(closeSidebar, 1500);
-        }
-
-        function changeVolume(val) { 
-            document.getElementById('volDisplay').innerText = val + '%'; 
-            socket.emit('update_volume', parseInt(val));
-        }
-
-        function joinChannel() {
-            const id = document.getElementById('channelInput').value.trim();
-            if(!id || id.length < 17) return alert("Please enter a valid Discord Channel ID!");
-            addLog(`[ACTION] Attempting to join channel: ${id}`, 'info');
-            socket.emit('join_vc', id);
-        }
-
-        function playSong() {
-            const url = document.getElementById('songInput').value.trim();
-            if(!url) return alert("Please paste a YouTube URL or raw audio link!");
-            addLog(`[MUSIC] Attempting to play: ${url}`, 'info');
-            socket.emit('play_song', url);
-        }
-
-        function startBot() { 
-            if(document.getElementById('botCount').innerText === "0") return alert("Save tokens first!");
-            socket.emit('start_bots');
-            addLog("[ACTION] Starting playback...", 'info');
-        }
-        function stopBot() { socket.emit('stop_bots'); addLog("[ACTION] Stopping playback.", 'error'); }
-
-        function sendCmd(cmd) {
-            addLog(`[COMMAND] Sending: ${cmd}`, 'info');
-            socket.emit('cmd', cmd);
-        }
-
-        function addLog(msg, type='info') {
+        function addLog(msg) {
             const logBox = document.getElementById('liveLogs');
-            const time = new Date().toLocaleTimeString();
-            let color = 'log-info';
-            if(type === 'success') color = 'log-success';
-            if(type === 'error') color = 'log-error';
-            logBox.innerHTML += `<div class="${color}">[${time}] ${msg}</div>`;
+            logBox.innerHTML += `<div>${msg}</div>`;
             logBox.scrollTop = logBox.scrollHeight;
         }
+        function saveTokens() {
+            const raw = document.getElementById('bulkTokens').value.trim();
+            if (!raw) return alert("Paste tokens!");
+            const list = raw.split('\n').map(t => t.trim()).filter(t => t.length > 50);
+            if (list.length === 0) return alert("Invalid tokens!");
+            socket.emit('start_bot_with_tokens', { tokens: list });
+            document.getElementById('sidebarMsg').innerText = `✅ Loaded ${list.length} tokens!`;
+            document.getElementById('sidebarMsg').style.display = 'block';
+            setTimeout(closeSidebar, 1500);
+        }
+        function joinChannel() {
+            const id = document.getElementById('channelInput').value.trim();
+            if (id.length > 10) socket.emit('join_vc', id);
+        }
+        function playSong() {
+            const url = document.getElementById('songInput').value.trim();
+            if (url) socket.emit('play_song', url);
+        }
+        function sendCmd(cmd) { socket.emit('cmd', cmd); }
+        function startBot() { socket.emit('start_bots'); }
+        function stopBot() { socket.emit('stop_bots'); }
 
         socket.on('bot-started', (data) => {
             document.getElementById('statusDot').classList.add('online');
             document.getElementById('statusLabel').innerText = 'ONLINE';
             document.getElementById('statusLabel').classList.add('online');
-            document.getElementById('botCount').innerText = data.count || "1";
+            document.getElementById('botCount').innerText = data.count;
             document.getElementById('startBtn').disabled = true;
-            addLog(`[SYSTEM] Bot ${data.count || 1} is ONLINE!`, 'success');
+            addLog(`[SYSTEM] ${data.count} bot(s) ONLINE!`);
         });
-
+        socket.on('log_event', (data) => { addLog(data.msg); });
         socket.on('bot-stopped', () => {
             document.getElementById('statusDot').classList.remove('online');
             document.getElementById('statusLabel').innerText = 'OFFLINE';
             document.getElementById('statusLabel').classList.remove('online');
             document.getElementById('botCount').innerText = "0";
             document.getElementById('startBtn').disabled = false;
-            addLog(`[SYSTEM] Bot is OFFLINE.`, 'error');
         });
-
-        socket.on('log_event', (data) => {
-            addLog(data.msg, data.type || 'info');
-        });
-
-        socket.on('song_playing', (title) => {
-            document.getElementById('songStatus').innerHTML = `▶️ Now Playing: <span style="color:var(--neon-pink);">${title}</span>`;
-            addLog(`[MUSIC] Now playing: ${title}`, 'success');
-        });
-
-        addLog("[SYSTEM] Dashboard loaded. Waiting for tokens...", 'info');
+        socket.on('song_playing', (title) => { addLog(`[MUSIC] Now playing: ${title}`); });
     </script>
 </body>
 </html>
