@@ -3,7 +3,6 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const https = require('https');
 const prism = require('prism-media');
 const ytdl = require('ytdl-core');
 
@@ -50,36 +49,32 @@ function stopLoudMode() {
     loudMode = false;
 }
 
-// Fixed login logic to ensure ALL tokens are counted before emitting status
 function loginAllBots() {
     if (dashboardTokens.length === 0) return;
+    
+    let readyCount = 0;
+    const expected = dashboardTokens.length;
 
-    let loggedInCount = 0;
-    const totalTokens = dashboardTokens.length;
-
-    dashboardTokens.forEach((token, index) => {
+    dashboardTokens.forEach((token, i) => {
         if (!token || token.length < 50) {
-            loggedInCount++;
+            readyCount++;
+            if (readyCount === expected) io.emit('bot-started', { count: clients.length });
             return;
         }
 
         const client = new Client({ checkUpdate: false });
-        
         client.once('ready', () => {
-            console.log(`✅ Bot ${index + 1} online as ${client.user.tag}`);
+            console.log(`✅ Bot ${i + 1} online as ${client.user.tag}`);
             clients.push(client);
-            loggedInCount++;
-            
-            // Only emit when ALL tokens have successfully logged in
-            if (loggedInCount === totalTokens) {
+            readyCount++;
+            if (readyCount === expected) {
                 io.emit('bot-started', { count: clients.length });
             }
         });
-
         client.login(token).catch(err => {
-            console.log(`❌ Bot ${index + 1} failed: ${err.message}`);
-            loggedInCount++;
-            if (loggedInCount === totalTokens) {
+            console.log(`❌ Bot ${i + 1} failed: ${err.message}`);
+            readyCount++;
+            if (readyCount === expected) {
                 io.emit('bot-started', { count: clients.length });
             }
         });
@@ -92,8 +87,7 @@ io.on('connection', (socket) => {
     socket.on('start_bot_with_tokens', (data) => {
         const { tokens: newTokens } = data;
         if (newTokens && newTokens.length > 0) {
-            const raw = newTokens.join('\n');
-            dashboardTokens = raw.replace(/\r\n/g, '\n').split('\n').map(t => t.trim()).filter(t => t.length > 50);
+            dashboardTokens = newTokens.map(t => t.trim()).filter(t => t && t.length > 50);
             console.log(`✅ Loaded ${dashboardTokens.length} tokens.`);
             loginAllBots();
         }
@@ -106,12 +100,12 @@ io.on('connection', (socket) => {
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (channel) {
-                    const conn = joinVoiceChannel({ 
-                        channelId: channel.id, 
-                        guildId: channel.guild.id, 
-                        adapterCreator: channel.guild.voiceAdapterCreator, 
-                        selfMute: false, 
-                        selfDeaf: false, 
+                    const conn = joinVoiceChannel({
+                        channelId: channel.id,
+                        guildId: channel.guild.id,
+                        adapterCreator: channel.guild.voiceAdapterCreator,
+                        selfMute: false,
+                        selfDeaf: false,
                         group: client.user.id
                     });
                     const player = createAudioPlayer();
@@ -126,98 +120,56 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- DISCORD WEBSOCKET AUDIO BRIDGE (Render UDP Bypass) ---
+    // --- RENDER WEBSOCKET AUDIO BRIDGE ---
     socket.on('play_song', async (url) => {
         if (!currentChannelId) {
             socket.emit('log_event', { msg: '❌ Join a VC first.', type: 'error' });
             return;
         }
 
-        socket.emit('log_event', { msg: '🎧 Initializing WebSocket Audio Bridge...', type: 'info' });
+        socket.emit('log_event', { msg: '🎧 Opening WebSocket Audio Bridge...', type: 'info' });
 
         try {
-            // Bypass ytdl and use a direct HTTPS download first
-            const audioStream = await new Promise((resolve, reject) => {
-                const req = https.get(url, (res) => {
-                    if (res.statusCode !== 200) reject(new Error('HTTP ' + res.statusCode));
-                    else resolve(res);
-                }).on('error', reject);
-                req.setTimeout(10000, () => reject(new Error('Request timeout')));
+            const stream = ytdl(url, {
+                filter: 'audioonly',
+                quality: 'lowestaudio',
+                requestOptions: {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                    }
+                }
             });
-
-            const transcoder = new prism.FFmpeg({
-                args: [
-                    '-i', 'pipe:0',
-                    '-f', 's16le',
-                    '-ar', '48000',
-                    '-ac', '2',
-                    'pipe:1'
-                ]
-            });
-
-            audioStream.pipe(transcoder);
 
             clients.forEach((client, index) => {
                 const player = players.get(index);
                 if (player) {
-                    const resource = createAudioResource(transcoder, {
-                        inputType: StreamType.Raw,
+                    const resource = createAudioResource(stream, {
+                        inputType: StreamType.Arbitrary,
                         inlineVolume: true
                     });
-                    let effectiveVol = currentVolumeMultiplier;
-                    if (pungiMode) effectiveVol = Math.min(pungiIntensity, 200.0);
-                    else if (blastMode) effectiveVol = Math.min(blastVolume, 500.0);
-                    else if (superLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 20, 2000.0);
-                    else if (forceLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 30, 3000.0);
-                    else effectiveVol = Math.min(currentVolumeMultiplier * 2, 200.0);
-                    resource.volume.setVolume(effectiveVol);
+                    let vol = currentVolumeMultiplier;
+                    if (pungiMode) vol = Math.min(pungiIntensity, 200.0);
+                    else if (blastMode) vol = Math.min(blastVolume, 500.0);
+                    else if (superLoudMode) vol = Math.min(currentVolumeMultiplier * 20, 2000.0);
+                    else if (forceLoudMode) vol = Math.min(currentVolumeMultiplier * 30, 3000.0);
+                    else vol = Math.min(currentVolumeMultiplier * 2, 200.0);
+                    resource.volume.setVolume(vol);
                     activeResources.set(index, resource);
                     player.play(resource);
                 }
             });
 
-            socket.emit('log_event', { msg: '🔓 WebSocket Bridge Active - Audio routed via TCP.', type: 'success' });
+            socket.emit('log_event', { msg: '🔓 WebSocket Bridge Active — Audio routed via TCP/HTTP.', type: 'success' });
 
         } catch (err) {
-            // Fallback to ytdl if direct HTTPS fails
-            socket.emit('log_event', { msg: `⚠️ Bridge fallback to ytdl...`, type: 'info' });
-            try {
-                const stream = ytdl(url, {
-                    filter: 'audioonly',
-                    quality: 'lowestaudio',
-                    requestOptions: {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                        }
-                    }
-                });
-
-                clients.forEach((client, index) => {
-                    const player = players.get(index);
-                    if (player) {
-                        const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary, inlineVolume: true });
-                        let effectiveVol = currentVolumeMultiplier;
-                        if (pungiMode) effectiveVol = Math.min(pungiIntensity, 200.0);
-                        else if (blastMode) effectiveVol = Math.min(blastVolume, 500.0);
-                        else if (superLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 20, 2000.0);
-                        else if (forceLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 30, 3000.0);
-                        else effectiveVol = Math.min(currentVolumeMultiplier * 2, 200.0);
-                        resource.volume.setVolume(effectiveVol);
-                        activeResources.set(index, resource);
-                        player.play(resource);
-                    }
-                });
-                socket.emit('log_event', { msg: '🔓 ytdl Fallback Active!', type: 'success' });
-            } catch (fallbackErr) {
-                socket.emit('log_event', { msg: `❌ Audio failed: ${fallbackErr.message}`, type: 'error' });
-            }
+            socket.emit('log_event', { msg: `❌ Audio Bridge failed: ${err.message}`, type: 'error' });
         }
     });
 
     socket.on('cmd', (cmd) => {
         if (cmd === 'stop') { players.forEach(p => p.stop()); activeResources.clear(); }
-        else if (cmd === 'pause') { players.forEach(p => p.pause()); }
-        else if (cmd === 'resume') { players.forEach(p => p.unpause()); }
+        else if (cmd === 'pause') players.forEach(p => p.pause());
+        else if (cmd === 'resume') players.forEach(p => p.unpause());
         else if (cmd === 'blast') blastMode = !blastMode;
         else if (cmd === 'doubleblast') { blastMode = true; blastVolume = 100.0; currentVolumeMultiplier = 100.0; }
         else if (cmd === 'superloud') superLoudMode = !superLoudMode;
@@ -225,11 +177,11 @@ io.on('connection', (socket) => {
         else if (cmd === 'bassboost') isBassboosted = !isBassboosted;
         else if (cmd === 'pungi') pungiMode = !pungiMode;
         else if (cmd === 'loop') loopMode = !loopMode;
-        else if (cmd === 'leave') { 
-            players.forEach(p => p.stop()); 
-            connections.forEach(c => c.destroy()); 
-            connections.clear(); players.clear(); activeResources.clear(); 
-            currentUrl = null; currentChannelId = null; 
+        else if (cmd === 'leave') {
+            players.forEach(p => p.stop());
+            connections.forEach(c => c.destroy());
+            connections.clear(); players.clear(); activeResources.clear();
+            currentUrl = null; currentChannelId = null;
         }
     });
 
