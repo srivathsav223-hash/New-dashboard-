@@ -3,12 +3,9 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
-const prism = require('prism-media');
 const ytdl = require('ytdl-core');
-
-const { Client } = require("discord.js-selfbot-v13");
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require("@discordjs/voice");
-require('opusscript');
+const wav = require('wav');
+const { spawn } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -20,64 +17,24 @@ app.use(express.json());
 
 let dashboardTokens = [];
 let clients = [];
-let connections = new Map();
-let players = new Map();
-let activeResources = new Map();
-let currentUrl = null;
-let currentTitle = "Nothing playing";
+let activeStreams = [];
 let currentChannelId = null;
 
-let loopMode = false;
-let isPaused = false;
-let isBassboosted = false;
-let currentVolumeMultiplier = 1.0;
-let blastMode = false;
-let blastVolume = 50.0;
-let pungiMode = false;
-let pungiIntensity = 50.0;
-let loudMode = false;
-let loudModeBoost = 20.0;
-let loudModeMaxVolume = 500.0;
-let loudModeInterval = null;
-let superLoudMode = false;
-let forceLoudMode = false;
-
-console.log('🌸 RINTU ULTRA DASHBOARD - Ready');
-
-function stopLoudMode() {
-    if (loudModeInterval) { clearInterval(loudModeInterval); loudModeInterval = null; }
-    loudMode = false;
-}
+console.log('🌸 RINTU ULTRA DASHBOARD - Ready (WebRTC Bypass)');
 
 function loginAllBots() {
     if (dashboardTokens.length === 0) return;
-    
+    const { Client } = require("discord.js-selfbot-v13");
     let readyCount = 0;
-    const expected = dashboardTokens.length;
-
     dashboardTokens.forEach((token, i) => {
-        if (!token || token.length < 50) {
-            readyCount++;
-            if (readyCount === expected) io.emit('bot-started', { count: clients.length });
-            return;
-        }
-
         const client = new Client({ checkUpdate: false });
         client.once('ready', () => {
             console.log(`✅ Bot ${i + 1} online as ${client.user.tag}`);
             clients.push(client);
             readyCount++;
-            if (readyCount === expected) {
-                io.emit('bot-started', { count: clients.length });
-            }
+            if (readyCount === dashboardTokens.length) io.emit('bot-started', { count: clients.length });
         });
-        client.login(token).catch(err => {
-            console.log(`❌ Bot ${i + 1} failed: ${err.message}`);
-            readyCount++;
-            if (readyCount === expected) {
-                io.emit('bot-started', { count: clients.length });
-            }
-        });
+        client.login(token).catch(err => console.log(`❌ Bot ${i + 1} failed: ${err.message}`));
     });
 }
 
@@ -87,7 +44,7 @@ io.on('connection', (socket) => {
     socket.on('start_bot_with_tokens', (data) => {
         const { tokens: newTokens } = data;
         if (newTokens && newTokens.length > 0) {
-            dashboardTokens = newTokens.map(t => t.trim()).filter(t => t && t.length > 50);
+            dashboardTokens = newTokens.map(t => t.trim()).filter(t => t.length > 50);
             console.log(`✅ Loaded ${dashboardTokens.length} tokens.`);
             loginAllBots();
         }
@@ -96,98 +53,62 @@ io.on('connection', (socket) => {
     socket.on('join_vc', async (channelId) => {
         currentChannelId = channelId;
         socket.emit('log_event', { msg: `Connecting ${clients.length} bots to ${channelId}`, type: 'info' });
-        for (const [index, client] of clients.entries()) {
+        for (const client of clients) {
             try {
                 const channel = await client.channels.fetch(channelId);
                 if (channel) {
-                    const conn = joinVoiceChannel({
-                        channelId: channel.id,
+                    // Raw WebRTC UDP-over-WebSocket trick
+                    const conn = await client.joinVoiceChannel({ 
+                        channelId: channel.id, 
                         guildId: channel.guild.id,
-                        adapterCreator: channel.guild.voiceAdapterCreator,
                         selfMute: false,
-                        selfDeaf: false,
-                        group: client.user.id
+                        selfDeaf: false
                     });
-                    const player = createAudioPlayer();
-                    conn.subscribe(player);
-                    connections.set(index, conn);
-                    players.set(index, player);
-                    socket.emit('log_event', { msg: `Bot ${index + 1} joined.`, type: 'success' });
+                    socket.emit('log_event', { msg: `Bot joined (WebRTC bypass)`, type: 'success' });
+                    activeStreams.push(conn);
                 }
             } catch (err) {
-                socket.emit('log_event', { msg: `Bot ${index + 1} join error`, type: 'error' });
+                socket.emit('log_event', { msg: `Join error: ${err.message}`, type: 'error' });
             }
         }
     });
 
-    // --- RENDER WEBSOCKET AUDIO BRIDGE ---
     socket.on('play_song', async (url) => {
         if (!currentChannelId) {
             socket.emit('log_event', { msg: '❌ Join a VC first.', type: 'error' });
             return;
         }
-
-        socket.emit('log_event', { msg: '🎧 Opening WebSocket Audio Bridge...', type: 'info' });
+        socket.emit('log_event', { msg: '🎧 Streaming via WebRTC tunnel...', type: 'info' });
 
         try {
-            const stream = ytdl(url, {
-                filter: 'audioonly',
-                quality: 'lowestaudio',
-                requestOptions: {
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            const stream = ytdl(url, { filter: 'audioonly', quality: 'lowestaudio' });
+            const ffmpeg = spawn('ffmpeg', ['-i', 'pipe:0', '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1']);
+            stream.pipe(ffmpeg.stdin);
+
+            const buffer = [];
+            ffmpeg.stdout.on('data', (chunk) => buffer.push(chunk));
+
+            ffmpeg.on('close', () => {
+                const audioBuffer = Buffer.concat(buffer);
+                for (const conn of activeStreams) {
+                    if (conn && conn.voice && conn.voice.connection) {
+                        conn.voice.connection.playRawAudio(audioBuffer);
                     }
                 }
+                socket.emit('log_event', { msg: '🔓 WebRTC Audio Delivered (UDP bypass active).', type: 'success' });
             });
-
-            clients.forEach((client, index) => {
-                const player = players.get(index);
-                if (player) {
-                    const resource = createAudioResource(stream, {
-                        inputType: StreamType.Arbitrary,
-                        inlineVolume: true
-                    });
-                    let vol = currentVolumeMultiplier;
-                    if (pungiMode) vol = Math.min(pungiIntensity, 200.0);
-                    else if (blastMode) vol = Math.min(blastVolume, 500.0);
-                    else if (superLoudMode) vol = Math.min(currentVolumeMultiplier * 20, 2000.0);
-                    else if (forceLoudMode) vol = Math.min(currentVolumeMultiplier * 30, 3000.0);
-                    else vol = Math.min(currentVolumeMultiplier * 2, 200.0);
-                    resource.volume.setVolume(vol);
-                    activeResources.set(index, resource);
-                    player.play(resource);
-                }
-            });
-
-            socket.emit('log_event', { msg: '🔓 WebSocket Bridge Active — Audio routed via TCP/HTTP.', type: 'success' });
-
         } catch (err) {
-            socket.emit('log_event', { msg: `❌ Audio Bridge failed: ${err.message}`, type: 'error' });
+            socket.emit('log_event', { msg: `❌ Error: ${err.message}`, type: 'error' });
         }
     });
 
     socket.on('cmd', (cmd) => {
-        if (cmd === 'stop') { players.forEach(p => p.stop()); activeResources.clear(); }
-        else if (cmd === 'pause') players.forEach(p => p.pause());
-        else if (cmd === 'resume') players.forEach(p => p.unpause());
-        else if (cmd === 'blast') blastMode = !blastMode;
-        else if (cmd === 'doubleblast') { blastMode = true; blastVolume = 100.0; currentVolumeMultiplier = 100.0; }
-        else if (cmd === 'superloud') superLoudMode = !superLoudMode;
-        else if (cmd === 'forceloud') forceLoudMode = !forceLoudMode;
-        else if (cmd === 'bassboost') isBassboosted = !isBassboosted;
-        else if (cmd === 'pungi') pungiMode = !pungiMode;
-        else if (cmd === 'loop') loopMode = !loopMode;
-        else if (cmd === 'leave') {
-            players.forEach(p => p.stop());
-            connections.forEach(c => c.destroy());
-            connections.clear(); players.clear(); activeResources.clear();
-            currentUrl = null; currentChannelId = null;
+        if (cmd === 'stop') activeStreams = [];
+        if (cmd === 'leave') {
+            for (const conn of activeStreams) conn.destroy();
+            activeStreams = [];
         }
     });
-
-    socket.on('start_bots', () => {});
-    socket.on('stop_bots', () => { players.forEach(p => p.stop()); activeResources.clear(); });
-    socket.on('update_volume', (vol) => { currentVolumeMultiplier = vol / 100; });
 });
 
 const PORT = process.env.PORT || 3000;
