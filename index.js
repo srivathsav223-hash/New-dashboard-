@@ -9,14 +9,11 @@ const ytdl = require('ytdl-core');
 
 const { Client } = require("discord.js-selfbot-v13");
 const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType } = require("@discordjs/voice");
-const { spawn } = require("child_process");
 require('opusscript');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-    cors: { origin: "*" }
-});
+const io = socketIo(server);
 
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -62,10 +59,10 @@ function loginAllBots() {
         client.once('ready', () => {
             console.log(`✅ Bot ${i + 1} online as ${client.user.tag}`);
             clients.push(client);
-            io.emit('bot-started', { count: clients.length });
         });
         client.login(token).catch(err => console.log(`❌ Bot ${i + 1} failed: ${err.message}`));
     }
+    io.emit('bot-started', { count: clients.length });
 }
 
 io.on('connection', (socket) => {
@@ -74,14 +71,8 @@ io.on('connection', (socket) => {
     socket.on('start_bot_with_tokens', (data) => {
         const { tokens: newTokens } = data;
         if (newTokens && newTokens.length > 0) {
-            // MOBILE PASTE FIX: Reassemble tokens split by line wraps
             const raw = newTokens.join('\n');
-            const cleaned = raw
-                .replace(/\r\n/g, '\n')
-                .split('\n')
-                .map(t => t.trim())
-                .filter(t => t.length > 50); // Only take valid full tokens
-            dashboardTokens = cleaned;
+            dashboardTokens = raw.replace(/\r\n/g, '\n').split('\n').map(t => t.trim()).filter(t => t.length > 50);
             console.log(`✅ Loaded ${dashboardTokens.length} tokens.`);
             loginAllBots();
         }
@@ -114,7 +105,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- RENDER UDP BYPASS PIPELINE WITH DELAY ---
     socket.on('play_song', async (url) => {
         if (!currentChannelId) {
             socket.emit('log_event', { msg: '❌ Join a VC first.', type: 'error' });
@@ -122,18 +112,28 @@ io.on('connection', (socket) => {
         }
 
         socket.emit('log_event', { msg: '🎧 Initializing bypass...', type: 'info' });
+        await new Promise(r => setTimeout(r, 1500));
 
         try {
-            // Force a small delay to let Render's proxy arms settle
-            await new Promise(r => setTimeout(r, 3000));
+            // Step 1: Fire a silent audio tick to open the UDP gate
+            clients.forEach((client, index) => {
+                const player = players.get(index);
+                if (player) {
+                    const tick = createAudioResource(Buffer.from([0x00]), { inputType: StreamType.Raw, inlineVolume: true });
+                    player.play(tick);
+                    setTimeout(() => player.stop(), 50);
+                }
+            });
+
+            // Step 2: Wait 500ms, then send real audio
+            await new Promise(r => setTimeout(r, 500));
 
             const stream = ytdl(url, {
                 filter: 'audioonly',
                 quality: 'lowestaudio',
                 requestOptions: {
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'Accept': 'audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,*/*;q=0.8'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     }
                 }
             });
@@ -154,38 +154,30 @@ io.on('connection', (socket) => {
                 }
             });
 
-            // Send a silent empty audio tick to unlock the UDP stream
-            setTimeout(() => {
-                clients.forEach((client, index) => {
-                    const player = players.get(index);
-                    if (player) {
-                        const tick = createAudioResource(Buffer.from([0]), { inputType: StreamType.Raw, inlineVolume: true });
-                        player.play(tick);
-                        setTimeout(() => player.stop(), 100);
-                    }
-                });
-            }, 2000);
-
-            socket.emit('log_event', { msg: '🔓 Render Bypass Active - Audio unlocking in 3s.', type: 'success' });
+            socket.emit('log_event', { msg: '🔓 Bypass active - Audio streaming!', type: 'success' });
 
         } catch (err) {
-            socket.emit('log_event', { msg: `❌ Bypass Failed: ${err.message}`, type: 'error' });
+            socket.emit('log_event', { msg: `❌ Error: ${err.message}`, type: 'error' });
         }
     });
 
     socket.on('cmd', (cmd) => {
-        socket.emit('log_event', { msg: `Command: ${cmd}`, type: 'info' });
         if (cmd === 'stop') { players.forEach(p => p.stop()); activeResources.clear(); }
-        else if (cmd === 'pause') { players.forEach(p => p.pause()); isPaused = true; }
-        else if (cmd === 'resume') { players.forEach(p => p.unpause()); isPaused = false; }
-        else if (cmd === 'blast') { blastMode = !blastMode; pungiMode = false; superLoudMode = false; forceLoudMode = false; }
+        else if (cmd === 'pause') { players.forEach(p => p.pause()); }
+        else if (cmd === 'resume') { players.forEach(p => p.unpause()); }
+        else if (cmd === 'blast') blastMode = !blastMode;
         else if (cmd === 'doubleblast') { blastMode = true; blastVolume = 100.0; currentVolumeMultiplier = 100.0; }
-        else if (cmd === 'superloud') { superLoudMode = !superLoudMode; blastMode = false; pungiMode = false; forceLoudMode = false; }
-        else if (cmd === 'forceloud') { forceLoudMode = !forceLoudMode; blastMode = false; pungiMode = false; superLoudMode = false; }
-        else if (cmd === 'bassboost') { isBassboosted = !isBassboosted; }
-        else if (cmd === 'pungi') { pungiMode = !pungiMode; blastMode = false; superLoudMode = false; forceLoudMode = false; }
-        else if (cmd === 'loop') { loopMode = !loopMode; }
-        else if (cmd === 'leave') { players.forEach(p => p.stop()); connections.forEach(c => c.destroy()); connections.clear(); players.clear(); activeResources.clear(); currentUrl = null; currentChannelId = null; }
+        else if (cmd === 'superloud') superLoudMode = !superLoudMode;
+        else if (cmd === 'forceloud') forceLoudMode = !forceLoudMode;
+        else if (cmd === 'bassboost') isBassboosted = !isBassboosted;
+        else if (cmd === 'pungi') pungiMode = !pungiMode;
+        else if (cmd === 'loop') loopMode = !loopMode;
+        else if (cmd === 'leave') { 
+            players.forEach(p => p.stop()); 
+            connections.forEach(c => c.destroy()); 
+            connections.clear(); players.clear(); activeResources.clear(); 
+            currentUrl = null; currentChannelId = null; 
+        }
     });
 
     socket.on('start_bots', () => {});
