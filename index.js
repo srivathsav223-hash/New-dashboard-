@@ -14,7 +14,9 @@ require('opusscript');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: { origin: "*" }
+});
 
 app.use(express.static(__dirname));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
@@ -55,7 +57,7 @@ function loginAllBots() {
     if (dashboardTokens.length === 0) return;
     for (let i = 0; i < dashboardTokens.length; i++) {
         const token = dashboardTokens[i];
-        if (!token || token.length < 50) continue; // Strict token filter
+        if (!token || token.length < 50) continue;
         const client = new Client({ checkUpdate: false });
         client.once('ready', () => {
             console.log(`✅ Bot ${i + 1} online as ${client.user.tag}`);
@@ -72,10 +74,14 @@ io.on('connection', (socket) => {
     socket.on('start_bot_with_tokens', (data) => {
         const { tokens: newTokens } = data;
         if (newTokens && newTokens.length > 0) {
-            // Fixed token filtering to support 5+ tokens
-            dashboardTokens = newTokens
+            // MOBILE PASTE FIX: Reassemble tokens split by line wraps
+            const raw = newTokens.join('\n');
+            const cleaned = raw
+                .replace(/\r\n/g, '\n')
+                .split('\n')
                 .map(t => t.trim())
-                .filter(t => t && t.length > 50);
+                .filter(t => t.length > 50); // Only take valid full tokens
+            dashboardTokens = cleaned;
             console.log(`✅ Loaded ${dashboardTokens.length} tokens.`);
             loginAllBots();
         }
@@ -108,33 +114,34 @@ io.on('connection', (socket) => {
         }
     });
 
-    // --- DUAL-FAILSAFE AUDIO PIPELINE ---
+    // --- RENDER UDP BYPASS PIPELINE WITH DELAY ---
     socket.on('play_song', async (url) => {
         if (!currentChannelId) {
             socket.emit('log_event', { msg: '❌ Join a VC first.', type: 'error' });
             return;
         }
 
-        socket.emit('log_event', { msg: '🎧 Attempting TCP Bridge...', type: 'info' });
+        socket.emit('log_event', { msg: '🎧 Initializing bypass...', type: 'info' });
 
         try {
-            // ATTEMPT 1: HTTPS TCP Bridge (Works for raw MP3s)
-            const audioStream = await new Promise((resolve, reject) => {
-                https.get(url, (res) => {
-                    if (res.statusCode !== 200) reject(new Error('HTTP status ' + res.statusCode));
-                    else resolve(res);
-                }).on('error', reject);
-            });
+            // Force a small delay to let Render's proxy arms settle
+            await new Promise(r => setTimeout(r, 3000));
 
-            const transcoder = new prism.FFmpeg({
-                args: ['-i', 'pipe:0', '-f', 's16le', '-ar', '48000', '-ac', '2', 'pipe:1']
+            const stream = ytdl(url, {
+                filter: 'audioonly',
+                quality: 'lowestaudio',
+                requestOptions: {
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,*/*;q=0.8'
+                    }
+                }
             });
-            audioStream.pipe(transcoder);
 
             clients.forEach((client, index) => {
                 const player = players.get(index);
                 if (player) {
-                    const resource = createAudioResource(transcoder, { inputType: StreamType.Raw, inlineVolume: true });
+                    const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary, inlineVolume: true });
                     let effectiveVol = currentVolumeMultiplier;
                     if (pungiMode) effectiveVol = Math.min(pungiIntensity, 200.0);
                     else if (blastMode) effectiveVol = Math.min(blastVolume, 500.0);
@@ -146,44 +153,23 @@ io.on('connection', (socket) => {
                     player.play(resource);
                 }
             });
-            socket.emit('log_event', { msg: '🔓 TCP Bridge Active!', type: 'success' });
 
-        } catch (tcpError) {
-            socket.emit('log_event', { msg: `⚠️ TCP failed, falling back to ytdl-core...`, type: 'info' });
-
-            // ATTEMPT 2: ytdl-core (Masked request for YouTube)
-            try {
-                const stream = ytdl(url, {
-                    filter: 'audioonly',
-                    quality: 'lowestaudio',
-                    requestOptions: {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                            'Accept': 'audio/webm,audio/ogg,audio/wav,audio/*;q=0.9,*/*;q=0.8'
-                        }
-                    }
-                });
-
+            // Send a silent empty audio tick to unlock the UDP stream
+            setTimeout(() => {
                 clients.forEach((client, index) => {
                     const player = players.get(index);
                     if (player) {
-                        const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary, inlineVolume: true });
-                        let effectiveVol = currentVolumeMultiplier;
-                        if (pungiMode) effectiveVol = Math.min(pungiIntensity, 200.0);
-                        else if (blastMode) effectiveVol = Math.min(blastVolume, 500.0);
-                        else if (superLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 20, 2000.0);
-                        else if (forceLoudMode) effectiveVol = Math.min(currentVolumeMultiplier * 30, 3000.0);
-                        else effectiveVol = Math.min(currentVolumeMultiplier * 2, 200.0);
-                        resource.volume.setVolume(effectiveVol);
-                        activeResources.set(index, resource);
-                        player.play(resource);
+                        const tick = createAudioResource(Buffer.from([0]), { inputType: StreamType.Raw, inlineVolume: true });
+                        player.play(tick);
+                        setTimeout(() => player.stop(), 100);
                     }
                 });
-                socket.emit('log_event', { msg: '🔓 Fallback ytdl-core Active!', type: 'success' });
+            }, 2000);
 
-            } catch (ytdlError) {
-                socket.emit('log_event', { msg: `❌ Audio failed completely: ${ytdlError.message}`, type: 'error' });
-            }
+            socket.emit('log_event', { msg: '🔓 Render Bypass Active - Audio unlocking in 3s.', type: 'success' });
+
+        } catch (err) {
+            socket.emit('log_event', { msg: `❌ Bypass Failed: ${err.message}`, type: 'error' });
         }
     });
 
